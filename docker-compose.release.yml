@@ -1,0 +1,21 @@
+version: "3.7"
+
+x-default-build: &default-build
+    build: .
+
+services:
+    rewardsapi-latest:
+        <<: *default-build
+        image: songadao/rewardsapi:latest
+
+    rewardsapi-major:
+        <<: *default-build
+        image: songadao/rewardsapi:1
+
+    rewardsapi-minor:
+        <<: *default-build
+        image: songadao/rewardsapi:1.0
+
+    rewardsapi-patch:
+        <<: *default-build
+        image: songadao/rewardsapi:1.0.0

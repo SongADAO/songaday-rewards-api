@@ -21,7 +21,7 @@ router = APIRouter(
 
 # http://localhost:5000/songadao-rewards-api/claim/?address=0xBCD17bC16d53D690Ba29d567E79d41d4a7049451&signature=bleh&nonce=bleh&reward_id=1&reward_claim_values={"fields":[{"name":"testname","value":"testvalue"}]}
 
-# http://localhost:5000/songadao-rewards-api/claim/?address=0xBCD17bC16d53D690Ba29d567E79d41d4a7049451&signature=bleh&nonce=bleh&reward_id=7&reward_claim_values={"fields":[{"name":"testname","value":"testvalue"}]}
+# http://localhost:5000/songadao-rewards-api/claim/?address=0x9d42a4D69e02D81F6f6d140Fee4D92ca3F22c0D0&signature=0x8663258c2f6fab515cb596d594daf3ac8c6255d96b99e0211ec2e09551cdb68f7aa720ee36a6c296800871d50a5bf3a985ebf54596ab7e102db768af5eede2d01b&nonce=3ddde76e-d8a6-468c-a60a-0bbf1ebdde72&reward_id=7&reward_claim_values={"fields":[{"name":"testname","value":"testvalue"}]}
 
 
 def format_error(error: Union[str, Dict[str, str], Exception]):

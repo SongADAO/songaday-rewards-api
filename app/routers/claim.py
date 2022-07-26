@@ -94,7 +94,7 @@ async def claim_get(req: Request):
             )
             is False
         ):
-            raise Exception("Address is not allowed to claim")
+            raise Exception("Invalid signature")
     except Exception as error:
         error400(error)
 
@@ -167,7 +167,7 @@ async def claim_post(payload: ClaimRequest = Body(...)):
             )
             is False
         ):
-            raise Exception("Address is not allowed to claim")
+            raise Exception("Invalid signature")
     except Exception as error:
         error400(error)
 

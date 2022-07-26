@@ -52,19 +52,25 @@ def claim(address: str, reward_id: str, reward_claim_fields: ClaimFields):
     if response_json["tier"]["reward"]["claim_poap"]:
         claim_poap(address, response_json["tier"]["reward"]["claim_poap"])
 
-    # TODO:
-    # 1. Get reward info from api.
-    #   POAP ID
-    #   Collected Fields
-    # 2. Check reward api to verify address is valid for claiming reward id.
-    # 3. Verify collected data is complete
-    # 4. Issue POAP
-    # 5. Send email with field data.
 
+def claim_poap(address: str, poap_id: str):
+    url = "https://api.poap.tech/actions/claim-delivery-v2"
 
-def claim_poap(address: str, poap: str):
-    # TODO: Claim POAP
-    return
+    payload = {
+        "address": address,
+        "id": poap_id,
+    }
+
+    headers = {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+    }
+
+    response = requests.post(url, json=payload, headers=headers)
+
+    if response.ok is False:
+        print(f"Failed to deliver poap: {address} - {poap_id}")
+        raise Exception("Failed to delivery poap")
 
 
 def send_claim_email(

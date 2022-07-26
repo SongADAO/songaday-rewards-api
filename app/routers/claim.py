@@ -8,7 +8,7 @@ from typing import Dict, Union
 from fastapi import APIRouter, Request, Body, HTTPException
 from .config import URL_PREFIX
 from ..claim.claim import claim
-from ..claim.typings import ClaimRequest
+from ..claim.typings import ClaimRequest, ClaimFieldsInput, ClaimFields
 from ..verification.verification import is_verified
 from ..signature.signature import has_valid_signature
 
@@ -19,7 +19,9 @@ router = APIRouter(
 )
 
 
-# http://localhost:5000/songadao-rewards-api/claim/?bleh=bleh
+# http://localhost:5000/songadao-rewards-api/claim/?address=0xBCD17bC16d53D690Ba29d567E79d41d4a7049451&signature=bleh&nonce=bleh&reward_id=1&reward_claim_values={"fields":[{"name":"testname","value":"testvalue"}]}
+
+# http://localhost:5000/songadao-rewards-api/claim/?address=0xBCD17bC16d53D690Ba29d567E79d41d4a7049451&signature=bleh&nonce=bleh&reward_id=7&reward_claim_values={"fields":[{"name":"testname","value":"testvalue"}]}
 
 
 def format_error(error: Union[str, Dict[str, str], Exception]):
@@ -80,7 +82,7 @@ async def claim_get(req: Request):
     if "reward_id" not in payload:
         error400("Missing reward id parameter")
 
-    if "reward_data" not in payload:
+    if "reward_claim_values" not in payload:
         error400("Missing reward data parameter")
 
     # Valid Signature
@@ -98,61 +100,100 @@ async def claim_get(req: Request):
 
     # BrightID Verification
     # --------------------------------------------------------------------------
+    # try:
+    #     if is_verified(payload["address"]) is False:
+    #         raise Exception("Address is not allowed to claim")
+    # except Exception as error:
+    #     error400(error)
+
+    # Input Traits
+    # --------------------------------------------------------------------------
     try:
-        if is_verified(payload["address"]) is False:
-            raise Exception("Address is not allowed to claim")
-    except Exception as error:
-        error400(error)
+        reward_claim_fields_input: ClaimFieldsInput = json.loads(
+            payload["reward_claim_values"]
+        )
+        print(reward_claim_fields_input)
+    except Exception:
+        error400("Malformed traits parameter")
 
     # Claim
     # --------------------------------------------------------------------------
 
+    # print(reward_claim_fields_input)
     try:
-        claim(payload["address"], payload["reward_id"], payload["reward_data"])
+        claim(
+            payload["address"],
+            payload["reward_id"],
+            reward_claim_fields_input["fields"],
+        )
 
         return {"claimed": True}
     except Exception as error:
         error400(error)
 
 
-# @router.post("/")
-# async def claim_post(payload: claimRequest = Body(...)):
-#     """
-#     claim API Route (POST)
-#     """
+@router.post("/")
+async def claim_post(payload: ClaimRequest = Body(...)):
+    """
+    claim API Route (POST)
+    """
 
-#     print(payload)
+    print(payload)
 
-#     # Params
-#     # --------------------------------------------------------------------------
+    # Params
+    # --------------------------------------------------------------------------
 
-#     if "address" not in payload:
-#         error400("Missing address parameter")
+    if "address" not in payload:
+        error400("Missing address parameter")
 
-#     if "traits" not in payload:
-#         error400("Missing traits parameter")
+    if "signature" not in payload:
+        error400("Missing signature parameter")
 
-#     # Verification
-#     # --------------------------------------------------------------------------
+    if "nonce" not in payload:
+        error400("Missing nonce parameter")
 
-#     try:
-#         if is_verified(payload["address"]) is False:
-#             raise Exception("Address is not allowed to claim")
-#     except Exception as error:
-#         error400(error)
+    if "reward_id" not in payload:
+        error400("Missing reward id parameter")
 
-#     # Input Traits
-#     # --------------------------------------------------------------------------
+    if "reward_claim_values" not in payload:
+        error400("Missing reward data parameter")
 
-#     input_traits: InputTraits = payload["traits"]
-#     print(input_traits)
+    # Valid Signature
+    # --------------------------------------------------------------------------
+    try:
+        if (
+            has_valid_signature(
+                payload["address"], payload["signature"], payload["nonce"]
+            )
+            is False
+        ):
+            raise Exception("Address is not allowed to claim")
+    except Exception as error:
+        error400(error)
 
-#     # claim
-#     # --------------------------------------------------------------------------
+    # BrightID Verification
+    # --------------------------------------------------------------------------
+    # try:
+    #     if is_verified(payload["address"]) is False:
+    #         raise Exception("Address is not allowed to claim")
+    # except Exception as error:
+    #     error400(error)
 
-#     try:
-#         claim_data = claim(payload["address"], input_traits)
+    # Input Traits
+    # --------------------------------------------------------------------------
+    reward_claim_fields_input: ClaimFieldsInput = payload["reward_claim_values"]
+    print(reward_claim_fields_input)
 
-#         return {"data": claim_data}
-#     except Exception as error:
-#         error400(error)
+    # Claim
+    # --------------------------------------------------------------------------
+
+    try:
+        claim(
+            payload["address"],
+            payload["reward_id"],
+            reward_claim_fields_input["fields"],
+        )
+
+        return {"claimed": True}
+    except Exception as error:
+        error400(error)

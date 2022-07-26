@@ -23,7 +23,9 @@ def has_valid_signature(address: str, signature: str, nonce: str) -> bool:
 
     original_message = SIGNATURE_MESSAGE + nonce
     message_hash = defunct_hash_message(text=original_message)
+    print(original_message)
 
     signer: str = web3.eth.account.recoverHash(message_hash, signature=signature)
+    print(signer)
 
     return Web3.toChecksumAddress(address) == Web3.toChecksumAddress(signer)

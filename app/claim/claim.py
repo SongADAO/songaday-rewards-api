@@ -58,7 +58,8 @@ def claim(address: str, reward_id: str, reward_claim_fields: ClaimFields):
 
 
 def claim_poap(address: str, event_id: str):
-    event_id = "56211"
+    # event_id = "56211"
+    event_id = "57634"
 
     secrets = json.loads(POAP_SECRETS)
 

@@ -11,7 +11,9 @@ from .config import (
     REWARD_CLAIM_TO,
     SENDGRID_API_KEY,
     POAP_API_KEY,
-    POAP_OAUTH_KEY,
+    POAP_AUTH0_AUDIENCE,
+    POAP_AUTH0_CLIENT_ID,
+    POAP_AUTH0_CLIENT_SECRET,
     POAP_SECRETS,
 )
 
@@ -46,20 +48,19 @@ def claim(address: str, reward_id: str, reward_claim_fields: ClaimFields):
         print(f"Not claimable: {reward_id} - {address}")
         raise Exception("Not claimable")
 
-    # if response_json["tier"]["reward"]["claim_fields"] and reward_claim_fields:
-    #     send_claim_email(
-    #         response_json["tier"]["name"],
-    #         response_json["tier"]["reward"]["offering"][0],
-    #         reward_claim_fields,
-    #     )
+    if response_json["tier"]["reward"]["claim_fields"] and reward_claim_fields:
+        send_claim_email(
+            response_json["tier"]["name"],
+            response_json["tier"]["reward"]["offering"][0],
+            reward_claim_fields,
+        )
 
     if response_json["tier"]["reward"]["claim_poap"]:
         claim_poap(address, response_json["tier"]["reward"]["claim_poap"]["eventId"])
 
 
 def claim_poap(address: str, event_id: str):
-    # event_id = "56211"
-    event_id = "57634"
+    # event_id = "57634"
 
     secrets = json.loads(POAP_SECRETS)
 
@@ -75,6 +76,45 @@ def claim_poap(address: str, event_id: str):
         print(f"Missing poap secret: {address} - {event_id}")
         raise Exception("Missing poap secret")
 
+    # return
+
+    # --------------------------------------------------------------------------
+
+    url = "https://poapauth.auth0.com/oauth/token"
+
+    payload = {
+        "audience": POAP_AUTH0_AUDIENCE,
+        "grant_type": "client_credentials",
+        "client_id": POAP_AUTH0_CLIENT_ID,
+        "client_secret": POAP_AUTH0_CLIENT_SECRET,
+    }
+
+    headers = {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+    }
+
+    response = requests.post(url, json=payload, headers=headers)
+
+    print(response)
+    print(response.json())
+
+    if response.ok is False:
+        print(f"Could not authenticate with poap: {address} - {event_id}")
+        raise Exception("Could not authenticate with poap")
+
+    auth_response = response.json()
+
+    if "access_token" not in auth_response or auth_response["access_token"] == "":
+        print(f"Could not authenticate with poap: {address} - {event_id}")
+        raise Exception("Could not authenticate with poap")
+
+    access_token = auth_response["access_token"]
+
+    # return
+
+    # --------------------------------------------------------------------------
+
     url = f"https://api.poap.tech/event/{event_id}/qr-codes"
 
     payload = {
@@ -84,14 +124,16 @@ def claim_poap(address: str, event_id: str):
     headers = {
         "Accept": "application/json",
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {POAP_OAUTH_KEY}",
+        "Authorization": f"Bearer {access_token}",
         "X-API-Key": POAP_API_KEY,
     }
 
     response = requests.post(url, json=payload, headers=headers)
 
+    print("-------------------------------------------------------")
     print(response)
     print(response.json())
+    print("-------------------------------------------------------")
 
     if response.ok is False:
         print(f"Poap supply is 0: {address} - {event_id}")
@@ -99,8 +141,23 @@ def claim_poap(address: str, event_id: str):
 
     qr_codes = response.json()
 
+    # return
+
+    # --------------------------------------------------------------------------
+
+    # qr_codes[0]["qr_hash"] = "f5re5m"
+    # qr_codes[0][
+    #     "secret"
+    # ] = "ea2bc6eb6a1e466e389f5be16878f79e5ff3609b9f9355e804c38712db571569"
+
+    attempts = 0
     for qr_code in qr_codes:
-        if qr_code["claimed"] is False:
+        if qr_code["claimed"] is False and qr_code["qr_hash"] != "":
+            attempts += 1
+
+            if attempts > 10:
+                raise Exception(f"Failed to deliver poap: To many retries")
+
             qr_hash = qr_code["qr_hash"]
 
             url = f"https://api.poap.tech/actions/claim-qr?qr_hash={qr_hash}"
@@ -108,14 +165,16 @@ def claim_poap(address: str, event_id: str):
             headers = {
                 "Accept": "application/json",
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {POAP_OAUTH_KEY}",
+                "Authorization": f"Bearer {access_token}",
                 "X-API-Key": POAP_API_KEY,
             }
 
             response = requests.get(url, headers=headers)
 
+            print("-------------------------------------------------------")
             print(response)
             print(response.json())
+            print("-------------------------------------------------------")
 
             if response.ok is False:
                 print(f"Couldn't find claimable poap: {address} - {event_id}")
@@ -123,7 +182,11 @@ def claim_poap(address: str, event_id: str):
 
             claims = response.json()
 
-            if claims["claimed"] is True:
+            # return
+
+            # ------------------------------------------------------------------
+
+            if claims["claimed"] is False and claims["is_active"] is True:
                 url = "https://api.poap.tech/actions/claim-qr"
 
                 payload = {
@@ -135,23 +198,31 @@ def claim_poap(address: str, event_id: str):
                 headers = {
                     "Accept": "application/json",
                     "Content-Type": "application/json",
-                    "Authorization": f"Bearer {POAP_OAUTH_KEY}",
+                    "Authorization": f"Bearer {access_token}",
                     "X-API-Key": POAP_API_KEY,
                 }
 
                 response = requests.post(url, json=payload, headers=headers)
 
+                print("-------------------------------------------------------")
                 print(response)
                 print(response.json())
+                print("-------------------------------------------------------")
 
                 # TODO: If error is 'already claimed' just continue the loop.
                 # TODO: Make sure the same address can't claim multiple.
 
-                if response.ok is False:
-                    print(f"Failed to deliver poap: {address} - {event_id}")
-                    raise Exception("Failed to deliver poap")
+                if response.ok is True:
+                    return
 
-                return
+                if response.ok is False:
+                    response_json: dict[str, str] = response.json()
+                    error_message: str = response_json["message"]
+                    print(f"Failed to deliver poap: {address} - {event_id}")
+                    print(error_message)
+
+                    if error_message != "QR Claim already claimed":
+                        raise Exception(f"Failed to deliver poap: {error_message}")
 
 
 def send_claim_email(

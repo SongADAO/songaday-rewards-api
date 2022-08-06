@@ -50,6 +50,7 @@ def claim(address: str, reward_id: str, reward_claim_fields: ClaimFields):
 
     if response_json["tier"]["reward"]["claim_fields"] and reward_claim_fields:
         send_claim_email(
+            address,
             response_json["tier"]["name"],
             response_json["tier"]["reward"]["offering"][0],
             reward_claim_fields,
@@ -226,7 +227,7 @@ def claim_poap(address: str, event_id: str):
 
 
 def send_claim_email(
-    tier_name: str, reward_name: str, reward_claim_fields: ClaimFields
+    address: str, tier_name: str, reward_name: str, reward_claim_fields: ClaimFields
 ):
     mail_from = REWARD_CLAIM_FROM
     mail_to = REWARD_CLAIM_TO
@@ -243,6 +244,9 @@ Tier:
 
 Reward:
 {reward_name}
+
+Address:
+{address}
 
 Fields:
 """

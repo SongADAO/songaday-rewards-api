@@ -48,6 +48,9 @@ def claim(address: str, reward_id: str, reward_claim_fields: ClaimFields):
         print(f"Not claimable: {reward_id} - {address}")
         raise Exception("Not claimable")
 
+    if response_json["tier"]["reward"]["claim_poap"]:
+        claim_poap(address, response_json["tier"]["reward"]["claim_poap"]["eventId"])
+
     if response_json["tier"]["reward"]["claim_fields"] and reward_claim_fields:
         send_claim_email(
             address,
@@ -55,9 +58,6 @@ def claim(address: str, reward_id: str, reward_claim_fields: ClaimFields):
             response_json["tier"]["reward"]["offering"][0],
             reward_claim_fields,
         )
-
-    if response_json["tier"]["reward"]["claim_poap"]:
-        claim_poap(address, response_json["tier"]["reward"]["claim_poap"]["eventId"])
 
 
 def claim_poap(address: str, event_id: str):
